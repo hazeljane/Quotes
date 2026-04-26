@@ -3,10 +3,11 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     userCode: {
-      type: String,
-      unique: true,
-      required: true
-    },
+  type: String,
+  unique: true,
+  required: true,
+  default: () => "U" + Date.now()
+}
 
     username: {
       type: String,

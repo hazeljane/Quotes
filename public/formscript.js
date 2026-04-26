@@ -1,3 +1,5 @@
+document.addEventListener("DOMContentLoaded", () => {
+
 const form = document.getElementById("profileForm");
 const profileInput = document.getElementById("profileInput");
 const profileIcon = document.getElementById("profileIcon");
@@ -18,7 +20,7 @@ profileInput.addEventListener("change", function () {
 
     profileIcon.innerHTML = `
       <img src="${imageData}" 
-           style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+        style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
     `;
   };
 
@@ -38,6 +40,10 @@ form.addEventListener("submit", async (e) => {
     alert("Please fill all fields");
     return;
   }
+
+  const btn = form.querySelector("button");
+  btn.disabled = true;
+  btn.textContent = "Registering...";
 
   try {
     const res = await fetch("/api/register", {
@@ -70,5 +76,10 @@ form.addEventListener("submit", async (e) => {
   } catch (err) {
     alert("Server error. Please try again.");
     console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Register";
   }
+});
+
 });
