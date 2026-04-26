@@ -283,15 +283,31 @@ app.get("/user/:id", async (req, res) => {
   try {
     await connectDB();
 
-    const user = await User.findById(req.params.id);
+    const { id } = req.params;
+
+    // validate id first (prevents crash)
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(user);
+    res.json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      image: user.image,
+      likedQuotes: user.likedQuotes,
+      ratedQuotes: user.ratedQuotes,
+      reviewedQuotes: user.reviewedQuotes
+    });
 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
