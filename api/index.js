@@ -1,94 +1,85 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
 const serverless = require("serverless-http");
+
+require("dotenv").config();
 
 const app = express();
 
 /* =========================
    MIDDLEWARE
 ========================= */
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE"]
-}));
-
+app.use(cors());
 app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 /* =========================
-   MONGO CONNECTION (VERCEL FIX)
+   DB CONNECTION (FIXED FOR VERCEL)
 ========================= */
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
+let isConnected = false;
 
 async function connectDB() {
-  if (cached.conn) return cached.conn;
+  if (isConnected) return;
 
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGO_URI, {
-      bufferCommands: false
-    });
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    isConnected = true;
+    console.log("✅ MongoDB Connected");
+  } catch (err) {
+    console.error("❌ DB Connection Error:", err.message);
+    throw err;
   }
-
-  cached.conn = await cached.promise;
-  return cached.conn;
 }
 
 /* =========================
    MODELS
 ========================= */
-const userSchema = new mongoose.Schema(
-  {
-    username: { type: String, required: true, trim: true },
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, trim: true },
 
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true
-    },
-
-    image: { type: String, default: "" },
-
-    likedQuotes: [{ type: mongoose.Schema.Types.ObjectId }],
-
-    ratedQuotes: [
-      {
-        quoteId: mongoose.Schema.Types.ObjectId,
-        rating: Number
-      }
-    ],
-
-    reviewedQuotes: [
-      {
-        quoteId: mongoose.Schema.Types.ObjectId,
-        review: String
-      }
-    ]
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true
   },
-  { timestamps: true }
-);
+
+  image: { type: String, default: "" },
+
+  likedQuotes: [{ type: mongoose.Schema.Types.ObjectId }],
+
+  ratedQuotes: [
+    {
+      quoteId: mongoose.Schema.Types.ObjectId,
+      rating: Number
+    }
+  ],
+
+  reviewedQuotes: [
+    {
+      quoteId: mongoose.Schema.Types.ObjectId,
+      review: String
+    }
+  ]
+}, { timestamps: true });
 
 const quoteSchema = new mongoose.Schema({
   text: { type: String, required: true },
   likes: { type: Number, default: 0 }
 });
 
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-const Quote = mongoose.models.Quote || mongoose.model("Quote", quoteSchema);
+const User = mongoose.model("User", userSchema);
+const Quote = mongoose.model("Quote", quoteSchema);
 
 /* =========================
-   REGISTER
+   REGISTER (FIXED)
 ========================= */
 app.post("/register", async (req, res) => {
   try {
     await connectDB();
+
+    console.log("REGISTER BODY:", req.body); // DEBUG
 
     let { username, email } = req.body;
 
@@ -99,13 +90,14 @@ app.post("/register", async (req, res) => {
     email = email.trim().toLowerCase();
 
     const exists = await User.findOne({ email });
+
     if (exists) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
     const user = await User.create({ username, email });
 
-    res.status(201).json({ message: "Registered", user });
+    res.json({ message: "Registered", user });
 
   } catch (err) {
     console.error("REGISTER ERROR:", err);
@@ -144,7 +136,6 @@ app.post("/login", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -169,7 +160,6 @@ app.get("/quotes", async (req, res) => {
     res.json(quotes);
 
   } catch (err) {
-    console.error("QUOTE ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -190,7 +180,7 @@ app.post("/like/:userId/:quoteId", async (req, res) => {
       return res.status(404).json({ message: "Not found" });
     }
 
-    const already = user.likedQuotes.includes(quoteId);
+    const already = user.likedQuotes.some(id => id.toString() === quoteId);
 
     if (!already) {
       user.likedQuotes.push(quoteId);
@@ -202,7 +192,6 @@ app.post("/like/:userId/:quoteId", async (req, res) => {
     res.json({ message: "Liked" });
 
   } catch (err) {
-    console.error("LIKE ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -235,7 +224,6 @@ app.post("/star/:userId/:quoteId", async (req, res) => {
     res.json({ message: "Rating saved" });
 
   } catch (err) {
-    console.error("STAR ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -255,6 +243,7 @@ app.post("/review/:userId/:quoteId", async (req, res) => {
     }
 
     const user = await User.findById(userId);
+
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const existing = user.reviewedQuotes.find(
@@ -272,7 +261,6 @@ app.post("/review/:userId/:quoteId", async (req, res) => {
     res.json({ message: "Review saved" });
 
   } catch (err) {
-    console.error("REVIEW ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -293,12 +281,11 @@ app.get("/user/:id", async (req, res) => {
     res.json(user);
 
   } catch (err) {
-    console.error("USER ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 });
 
 /* =========================
-   EXPORT VERCEL
+   EXPORT FOR VERCEL
 ========================= */
 module.exports = serverless(app);
