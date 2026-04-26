@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.textContent = "Registering...";
 
     try {
-      const res = await fetch("/api/register", {
+      const res = await fetch(`${API}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,9 +67,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (!res.ok) {
-        alert(data?.message || "Registration failed");
-        return;
-      }
+  if (res.status === 409) {
+    alert("Email already exists");
+  } else {
+    alert(data?.message || "Registration failed");
+  }
+  return;
+}
 
       alert("Registered successfully!");
 

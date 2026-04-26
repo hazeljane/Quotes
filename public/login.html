@@ -73,16 +73,15 @@ const btn = document.getElementById("loginBtn");
 const msg = document.getElementById("msg");
 const emailInput = document.getElementById("email");
 
-// CHANGE THIS IF DEPLOYED
 const API = "/api"; 
-// OR if local backend:
-// const API = "http://localhost:5000";
 
 if (localStorage.getItem("userId")) {
   window.location.href = "myquotes.html";
 }
 
 async function login() {
+  if (btn.disabled) return;
+
   const email = emailInput.value.trim().toLowerCase();
 
   msg.innerText = "";
@@ -105,11 +104,22 @@ async function login() {
       body: JSON.stringify({ email })
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Invalid server response");
+    }
 
     if (!res.ok) {
       msg.style.color = "red";
-      msg.innerText = data.message || "Login failed";
+
+      if (res.status === 404) {
+        msg.innerText = "User not found";
+      } else {
+        msg.innerText = data?.message || "Login failed";
+      }
+
       return;
     }
 
@@ -127,7 +137,7 @@ async function login() {
   } catch (err) {
     console.error("LOGIN ERROR:", err);
     msg.style.color = "red";
-    msg.innerText = "Server not responding";
+    msg.innerText = err.message || "Server not responding";
   } finally {
     btn.disabled = false;
     btn.innerText = "Login";

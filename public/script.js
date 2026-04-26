@@ -1,14 +1,8 @@
 let quotes = [];
 let index = 0;
 
-/* =========================
-   API CONFIG
-========================= */
 const API = "/api";
 
-/* =========================
-   AUTH
-========================= */
 const userId = localStorage.getItem("userId");
 const username = localStorage.getItem("username");
 
@@ -16,9 +10,6 @@ if (!userId) {
   window.location.href = "login.html";
 }
 
-/* =========================
-   ELEMENTS
-========================= */
 const userNameEl = document.getElementById("userName");
 const quoteEl = document.getElementById("quote");
 
@@ -28,9 +19,6 @@ const likeBtn = document.getElementById("likeBtn");
 const reviewInput = document.getElementById("reviewInput");
 const submitReview = document.getElementById("submitReview");
 
-/* =========================
-   INIT
-========================= */
 async function init() {
   try {
     userNameEl.textContent = `Welcome ${username || "User"}`;
@@ -40,14 +28,12 @@ async function init() {
 
   } catch (err) {
     console.error("INIT ERROR:", err);
+    alert("Failed to initialize app");
   }
 }
 
 init();
 
-/* =========================
-   FETCH HELPER (IMPORTANT)
-========================= */
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, options);
 
@@ -65,9 +51,6 @@ async function fetchJSON(url, options = {}) {
   return data;
 }
 
-/* =========================
-   LOAD QUOTES
-========================= */
 async function loadQuotes() {
   try {
     const data = await fetchJSON(`${API}/quotes`);
@@ -79,6 +62,7 @@ async function loadQuotes() {
       return;
     }
 
+    index = 0;
     showQuote();
 
   } catch (err) {
@@ -87,9 +71,6 @@ async function loadQuotes() {
   }
 }
 
-/* =========================
-   SHOW QUOTE
-========================= */
 function showQuote() {
   const q = quotes[index];
   if (!q) return;
@@ -97,9 +78,6 @@ function showQuote() {
   quoteEl.textContent = q.text;
 }
 
-/* =========================
-   LOAD USER
-========================= */
 async function loadUser() {
   try {
     const data = await fetchJSON(`${API}/user/${userId}`);
@@ -109,15 +87,11 @@ async function loadUser() {
   } catch (err) {
     console.error("LOAD USER ERROR:", err);
 
-    // auto logout if user invalid
     localStorage.clear();
     window.location.href = "login.html";
   }
 }
 
-/* =========================
-   NAVIGATION
-========================= */
 nextBtn?.addEventListener("click", () => {
   if (!quotes.length) return;
 
@@ -132,9 +106,6 @@ prevBtn?.addEventListener("click", () => {
   showQuote();
 });
 
-/* =========================
-   LIKE
-========================= */
 likeBtn?.addEventListener("click", async () => {
   try {
     const quoteId = quotes[index]?._id;
@@ -144,19 +115,21 @@ likeBtn?.addEventListener("click", async () => {
       method: "POST",
     });
 
+    alert("Liked!");
+
   } catch (err) {
     console.error("LIKE ERROR:", err);
     alert(err.message);
   }
 });
 
-/* =========================
-   REVIEW
-========================= */
 submitReview?.addEventListener("click", async () => {
   try {
     const text = reviewInput.value.trim();
-    if (!text) return alert("Write a review first");
+    if (!text) {
+      alert("Write a review first");
+      return;
+    }
 
     const quoteId = quotes[index]?._id;
     if (!quoteId) return;

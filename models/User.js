@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true, // ⚠️ this causes duplicate error if same email used
+      unique: true,
       lowercase: true,
       trim: true,
     },
