@@ -1,7 +1,7 @@
 let quotes = [];
 let index = 0;
 
-const API = "/api"; // 👈 important for Vercel deployment
+const API = "/api";
 
 /* =========================
    SESSION
@@ -42,6 +42,7 @@ const logoutBtn = document.getElementById("logoutBtn");
 function init() {
   userNameEl.textContent = `Welcome ${username || "User"}`;
   loadQuotes();
+  loadUser(); // preload once
 }
 
 init();
@@ -57,7 +58,7 @@ async function loadQuotes() {
 
     quotes = await res.json();
 
-    if (!quotes.length) {
+    if (!Array.isArray(quotes) || quotes.length === 0) {
       quoteEl.textContent = "No quotes found";
       return;
     }
@@ -76,7 +77,10 @@ async function loadQuotes() {
 function showQuote() {
   if (!quotes.length) return;
 
-  quoteEl.textContent = quotes[index].text;
+  const q = quotes[index];
+  if (!q) return;
+
+  quoteEl.textContent = q.text;
 
   likeBtn.classList.remove("active");
   dislikeBtn.classList.remove("active");
@@ -88,14 +92,12 @@ function showQuote() {
 ========================= */
 prevBtn.onclick = () => {
   if (!quotes.length) return;
-
   index = (index - 1 + quotes.length) % quotes.length;
   showQuote();
 };
 
 nextBtn.onclick = () => {
   if (!quotes.length) return;
-
   index = (index + 1) % quotes.length;
   showQuote();
 };
@@ -109,9 +111,13 @@ likeBtn.onclick = async () => {
 
   likeBtn.classList.toggle("active");
 
-  await fetch(`${API}/like/${userId}/${quoteId}`, {
-    method: "POST"
-  });
+  try {
+    await fetch(`${API}/like/${userId}/${quoteId}`, {
+      method: "POST"
+    });
+  } catch (err) {
+    console.error("Like failed", err);
+  }
 };
 
 /* =========================
@@ -135,11 +141,15 @@ ratingBtns.forEach((star, i) => {
       ratingBtns[j].classList.add("active");
     }
 
-    await fetch(`${API}/star/${userId}/${quoteId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ star: i + 1 })
-    });
+    try {
+      await fetch(`${API}/star/${userId}/${quoteId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ star: i + 1 })
+      });
+    } catch (err) {
+      console.error("Rating failed", err);
+    }
   };
 });
 
@@ -153,30 +163,32 @@ submitReview.onclick = async () => {
   const quoteId = quotes[index]?._id;
   if (!quoteId) return;
 
-  const res = await fetch(
-    `${API}/review/${userId}/${quoteId}`,
-    {
+  try {
+    const res = await fetch(`${API}/review/${userId}/${quoteId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ review: text })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || "Error");
+      return;
     }
-  );
 
-  const data = await res.json();
+    alert(data.message);
+    reviewInput.value = "";
 
-  if (!res.ok) {
-    alert(data.message || "Error");
-    return;
+    loadUser();
+
+  } catch (err) {
+    console.error(err);
   }
-
-  alert(data.message);
-
-  reviewInput.value = "";
-  loadUser();
 };
 
 /* =========================
-   USER DATA REFRESH
+   USER LOAD (SINGLE SOURCE OF TRUTH)
 ========================= */
 async function loadUser() {
   try {
@@ -188,19 +200,21 @@ async function loadUser() {
 
     userNameEl.textContent = `Welcome ${data.username || username}`;
 
+    window.__userData = data; // cache user data
   } catch (err) {
     console.log("User load failed");
   }
 }
 
 /* =========================
-   HISTORY
+   HISTORY (USE CACHE)
 ========================= */
-historyBtn.onclick = async () => {
+historyBtn.onclick = () => {
   modal.style.display = "flex";
 
-  const res = await fetch(`${API}/user/${userId}`);
-  const user = await res.json();
+  const user = window.__userData;
+
+  if (!user) return;
 
   historyList.innerHTML = "";
 
@@ -230,7 +244,6 @@ window.onclick = (e) => {
    LOGOUT
 ========================= */
 logoutBtn.onclick = () => {
-  localStorage.removeItem("userId");
-  localStorage.removeItem("username");
+  localStorage.clear();
   window.location.href = "login.html";
 };
