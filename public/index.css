@@ -15,9 +15,6 @@ body {
 	background: #f3f3f3;
 }
 
-/* =========================
-   CARD
-========================= */
 .card {
 	width: min(320px, 90%);
 	background: #846D64;
@@ -27,7 +24,6 @@ body {
 	box-shadow: 0 12px 25px rgba(0,0,0,0.25);
 }
 
-/* HEADER */
 .card-header {
 	display: flex;
 	justify-content: space-between;
@@ -45,7 +41,6 @@ body {
 	opacity: 0.8;
 }
 
-/* HISTORY ICON */
 #historyBtn {
 	cursor: pointer;
 	background: rgba(255,255,255,0.2);
@@ -58,9 +53,6 @@ body {
 	background: rgba(255,255,255,0.35);
 }
 
-/* =========================
-   QUOTE NAV
-========================= */
 .reaction-row {
 	display: flex;
 	align-items: center;
@@ -92,9 +84,6 @@ body {
 	font-size: 13px;
 }
 
-/* =========================
-   OPINION SECTION
-========================= */
 .opinion {
 	margin-top: 12px;
 	display: flex;
@@ -102,7 +91,6 @@ body {
 	gap: 10px;
 }
 
-/* LIKE / DISLIKE */
 .btn-group {
 	display: flex;
 	justify-content: center;
@@ -123,14 +111,12 @@ body {
 	transition: 0.2s;
 }
 
-/* ICON DEFAULT */
 .btn-group button span {
 	font-size: 22px;
 	transition: 0.2s;
 	color: white;
 }
 
-/* ACTIVE LIKE/DISLIKE */
 .btn-group button.active span {
 	color: #FFD166;
 	transform: scale(1.2);
@@ -141,9 +127,6 @@ body {
 	transform: scale(1.2);
 }
 
-/* =========================
-   STAR RATING
-========================= */
 .rating {
 	display: flex;
 	justify-content: space-between;
@@ -163,22 +146,17 @@ body {
 	transition: 0.2s;
 }
 
-/* hover */
 .rating button:hover {
 	color: gold;
 	transform: scale(1.2);
 }
 
-/* active */
 .rating button.active {
 	color: gold;
 	background: rgba(255, 215, 0, 0.2);
 	transform: scale(1.2);
 }
 
-/* =========================
-   REVIEW BOX
-========================= */
 .review-box {
 	margin-top: 12px;
 	display: flex;
@@ -220,9 +198,6 @@ body {
 	transform: scale(1.05);
 }
 
-/* =========================
-   MODAL
-========================= */
 .modal {
 	display: none;
 	position: fixed;
@@ -254,7 +229,6 @@ body {
 	font-size: 16px;
 }
 
-/* HISTORY LIST */
 #historyList {
 	list-style: none;
 }
@@ -272,7 +246,6 @@ body {
 	background: rgba(255,255,255,0.35);
 }
 
-/* GLOBAL BUTTON SMOOTH */
 button {
 	transition: all 0.2s ease;
 }
