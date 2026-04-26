@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - Quote App</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0f0f0f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  color: white;
+}
+
+.box {
+  background: #1c1c1c;
+  padding: 30px;
+  border-radius: 12px;
+  width: 320px;
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 6px;
+  outline: none;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background: #4caf50;
+  border: none;
+  color: white;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: gray;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  background: #45a049;
+}
+
+#msg {
+  margin-top: 10px;
+  font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>Login</h2>
+
+  <input type="email" id="email" placeholder="Enter Email">
+  <button id="loginBtn">Login</button>
+
+  <p id="msg"></p>
+</div>
+
+<script>
+const btn = document.getElementById("loginBtn");
+const msg = document.getElementById("msg");
+
+btn.addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim().toLowerCase();
+
+  msg.innerText = "";
+  msg.style.color = "red";
+
+  if (!email) {
+    msg.innerText = "Email is required";
+    return;
+  }
+
+  try {
+    btn.disabled = true;
+    btn.innerText = "Logging in...";
+
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      msg.innerText = data.message || "Login failed";
+      return;
+    }
+
+    localStorage.setItem("userId", data.user._id);
+    localStorage.setItem("username", data.user.username);
+    localStorage.setItem("email", data.user.email);
+
+    msg.style.color = "lightgreen";
+    msg.innerText = "Login successful! Redirecting...";
+
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 800);
+
+  } catch (err) {
+    msg.innerText = "Server error. Try again.";
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Login";
+  }
+});
+</script>
+
+</body>
+</html>

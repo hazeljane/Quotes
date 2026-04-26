@@ -1,0 +1,74 @@
+const form = document.getElementById("profileForm");
+const profileInput = document.getElementById("profileInput");
+const profileIcon = document.getElementById("profileIcon");
+
+let imageData = "";
+
+/* =========================
+   IMAGE PREVIEW
+========================= */
+profileInput.addEventListener("change", function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    imageData = e.target.result;
+
+    profileIcon.innerHTML = `
+      <img src="${imageData}" 
+           style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+    `;
+  };
+
+  reader.readAsDataURL(file);
+});
+
+/* =========================
+   REGISTER USER
+========================= */
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const username = document.getElementById("username").value.trim();
+  const email = document.getElementById("email").value.trim().toLowerCase();
+
+  if (!username || !email) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username,
+        email,
+        image: imageData
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || "Registration failed");
+      return;
+    }
+
+    alert("Registered successfully! Please login.");
+
+    form.reset();
+    profileIcon.innerHTML = `<span class="material-symbols-outlined">account_circle</span>`;
+    imageData = "";
+
+    window.location.href = "login.html";
+
+  } catch (err) {
+    alert("Server error. Please try again.");
+    console.error(err);
+  }
+});
