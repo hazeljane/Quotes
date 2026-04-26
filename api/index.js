@@ -279,36 +279,53 @@ app.post("/review/:userId/:quoteId", async (req, res) => {
 /* =========================
    GET USER
 ========================= */
-app.get("/user/:id", async (req, res) => {
+app.post("/register", async (req, res) => {
   try {
     await connectDB();
 
-    const { id } = req.params;
+    let { username, email, image } = req.body;
 
-    // validate id first (prevents crash)
-    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ message: "Invalid user ID" });
+    // VALIDATION
+    if (!username || !email) {
+      return res.status(400).json({
+        message: "Username and email are required"
+      });
     }
 
-    const user = await User.findById(id);
+    email = email.toLowerCase().trim();
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    // CHECK EXISTING USER
+    const exists = await User.findOne({ email });
+
+    if (exists) {
+      return res.status(409).json({
+        message: "Email already exists"
+      });
     }
 
-    res.json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      image: user.image,
-      likedQuotes: user.likedQuotes,
-      ratedQuotes: user.ratedQuotes,
-      reviewedQuotes: user.reviewedQuotes
+    // CREATE USER
+    const user = await User.create({
+      username: username.trim(),
+      email,
+      image: image || ""
+    });
+
+    // CLEAN RESPONSE (important for frontend)
+    res.status(201).json({
+      message: "Registered successfully",
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        image: user.image
+      }
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("REGISTER ERROR:", err);
+    res.status(500).json({
+      message: "Server error during registration"
+    });
   }
 });
 
