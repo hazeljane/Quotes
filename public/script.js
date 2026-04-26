@@ -41,8 +41,10 @@ const logoutBtn = document.getElementById("logoutBtn");
 ========================= */
 function init() {
   userNameEl.textContent = `Welcome ${username || "User"}`;
-  loadQuotes();
-  loadUser(); // preload once
+
+  loadQuotes().then(() => {
+    loadUser(); // ✅ only after quotes exist
+  });
 }
 
 init();
