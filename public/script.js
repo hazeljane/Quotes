@@ -1,7 +1,10 @@
 let quotes = [];
 let index = 0;
 
-const API = "/api";
+/* =========================
+   BACKEND URL (FIXED)
+========================= */
+const API = "http://localhost:5000";
 
 /* =========================
    SESSION
@@ -43,7 +46,7 @@ function init() {
   userNameEl.textContent = `Welcome ${username || "User"}`;
 
   loadQuotes().then(() => {
-    loadUser(); // ✅ only after quotes exist
+    loadUser();
   });
 }
 
@@ -77,8 +80,6 @@ async function loadQuotes() {
    SHOW QUOTE
 ========================= */
 function showQuote() {
-  if (!quotes.length) return;
-
   const q = quotes[index];
   if (!q) return;
 
@@ -123,7 +124,7 @@ likeBtn.onclick = async () => {
 };
 
 /* =========================
-   DISLIKE
+   DISLIKE (UI ONLY)
 ========================= */
 dislikeBtn.onclick = () => {
   dislikeBtn.classList.toggle("active");
@@ -179,7 +180,7 @@ submitReview.onclick = async () => {
       return;
     }
 
-    alert(data.message);
+    alert("Review saved");
     reviewInput.value = "";
 
     loadUser();
@@ -190,7 +191,7 @@ submitReview.onclick = async () => {
 };
 
 /* =========================
-   USER LOAD (SINGLE SOURCE OF TRUTH)
+   LOAD USER
 ========================= */
 async function loadUser() {
   try {
@@ -202,20 +203,20 @@ async function loadUser() {
 
     userNameEl.textContent = `Welcome ${data.username || username}`;
 
-    window.__userData = data; // cache user data
+    window.__userData = data;
+
   } catch (err) {
     console.log("User load failed");
   }
 }
 
 /* =========================
-   HISTORY (USE CACHE)
+   HISTORY
 ========================= */
 historyBtn.onclick = () => {
   modal.style.display = "flex";
 
   const user = window.__userData;
-
   if (!user) return;
 
   historyList.innerHTML = "";

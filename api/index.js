@@ -2,7 +2,6 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const serverless = require("serverless-http");
-
 require("dotenv").config();
 
 const app = express();
@@ -10,76 +9,93 @@ const app = express();
 /* =========================
    MIDDLEWARE
 ========================= */
-app.use(cors());
+app.use(cors({
+  origin: "*",
+  credentials: true
+}));
+
 app.use(express.json({ limit: "10mb" }));
 
 /* =========================
-   DB CONNECTION (FIXED FOR VERCEL)
+   DB CONNECTION (VERCEL SAFE)
 ========================= */
-let isConnected = false;
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 async function connectDB() {
-  if (isConnected) return;
+  if (cached.conn) return cached.conn;
 
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    isConnected = true;
-    console.log("✅ MongoDB Connected");
-  } catch (err) {
-    console.error("❌ DB Connection Error:", err.message);
-    throw err;
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    }).then((mongoose) => {
+      console.log("✅ MongoDB Connected");
+      return mongoose;
+    });
   }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
 
 /* =========================
    MODELS
 ========================= */
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, trim: true },
+const userSchema = new mongoose.Schema(
+  {
+    username: { type: String, required: true, trim: true },
 
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true
+    },
+
+    image: { type: String, default: "" },
+
+    likedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Quote" }],
+
+    ratedQuotes: [
+      {
+        quoteId: { type: mongoose.Schema.Types.ObjectId, ref: "Quote" },
+        rating: { type: Number, min: 1, max: 5 }
+      }
+    ],
+
+    reviewedQuotes: [
+      {
+        quoteId: { type: mongoose.Schema.Types.ObjectId, ref: "Quote" },
+        review: String
+      }
+    ]
   },
+  { timestamps: true }
+);
 
-  image: { type: String, default: "" },
-
-  likedQuotes: [{ type: mongoose.Schema.Types.ObjectId }],
-
-  ratedQuotes: [
-    {
-      quoteId: mongoose.Schema.Types.ObjectId,
-      rating: Number
-    }
-  ],
-
-  reviewedQuotes: [
-    {
-      quoteId: mongoose.Schema.Types.ObjectId,
-      review: String
-    }
-  ]
-}, { timestamps: true });
-
-const quoteSchema = new mongoose.Schema({
-  text: { type: String, required: true },
-  likes: { type: Number, default: 0 }
-});
+const quoteSchema = new mongoose.Schema(
+  {
+    text: { type: String, required: true },
+    likes: { type: Number, default: 0 }
+  },
+  { timestamps: true }
+);
 
 const User = mongoose.model("User", userSchema);
 const Quote = mongoose.model("Quote", quoteSchema);
 
 /* =========================
-   REGISTER (FIXED)
+   REGISTER
 ========================= */
 app.post("/register", async (req, res) => {
   try {
     await connectDB();
-
-    console.log("REGISTER BODY:", req.body); // DEBUG
 
     let { username, email } = req.body;
 
@@ -87,21 +103,20 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Missing fields" });
     }
 
-    email = email.trim().toLowerCase();
+    email = email.toLowerCase().trim();
 
     const exists = await User.findOne({ email });
-
     if (exists) {
-      return res.status(400).json({ message: "Email already exists" });
+      return res.status(409).json({ message: "Email already exists" });
     }
 
     const user = await User.create({ username, email });
 
-    res.json({ message: "Registered", user });
+    res.status(201).json({ message: "Registered", user });
 
   } catch (err) {
-    console.error("REGISTER ERROR:", err);
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -118,7 +133,7 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email required" });
     }
 
-    email = email.trim().toLowerCase();
+    email = email.toLowerCase().trim();
 
     const user = await User.findOne({ email });
 
@@ -128,20 +143,16 @@ app.post("/login", async (req, res) => {
 
     res.json({
       message: "Login success",
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email
-      }
+      user
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 /* =========================
-   QUOTES
+   GET QUOTES
 ========================= */
 app.get("/quotes", async (req, res) => {
   try {
@@ -149,7 +160,7 @@ app.get("/quotes", async (req, res) => {
 
     let quotes = await Quote.find();
 
-    if (!quotes.length) {
+    if (quotes.length === 0) {
       quotes = await Quote.insertMany([
         { text: "Believe in yourself." },
         { text: "Work hard in silence." },
@@ -160,12 +171,12 @@ app.get("/quotes", async (req, res) => {
     res.json(quotes);
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 /* =========================
-   LIKE
+   LIKE QUOTE
 ========================= */
 app.post("/like/:userId/:quoteId", async (req, res) => {
   try {
@@ -180,11 +191,12 @@ app.post("/like/:userId/:quoteId", async (req, res) => {
       return res.status(404).json({ message: "Not found" });
     }
 
-    const already = user.likedQuotes.some(id => id.toString() === quoteId);
+    const already = user.likedQuotes.includes(quoteId);
 
     if (!already) {
       user.likedQuotes.push(quoteId);
-      quote.likes++;
+      quote.likes += 1;
+
       await user.save();
       await quote.save();
     }
@@ -192,12 +204,12 @@ app.post("/like/:userId/:quoteId", async (req, res) => {
     res.json({ message: "Liked" });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 /* =========================
-   STAR
+   STAR RATING
 ========================= */
 app.post("/star/:userId/:quoteId", async (req, res) => {
   try {
@@ -224,7 +236,7 @@ app.post("/star/:userId/:quoteId", async (req, res) => {
     res.json({ message: "Rating saved" });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -243,14 +255,13 @@ app.post("/review/:userId/:quoteId", async (req, res) => {
     }
 
     const user = await User.findById(userId);
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const existing = user.reviewedQuotes.find(
+    const exists = user.reviewedQuotes.find(
       r => r.quoteId.toString() === quoteId
     );
 
-    if (existing) {
+    if (exists) {
       return res.status(400).json({ message: "Already reviewed" });
     }
 
@@ -261,12 +272,12 @@ app.post("/review/:userId/:quoteId", async (req, res) => {
     res.json({ message: "Review saved" });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 /* =========================
-   USER
+   GET USER
 ========================= */
 app.get("/user/:id", async (req, res) => {
   try {
@@ -281,11 +292,11 @@ app.get("/user/:id", async (req, res) => {
     res.json(user);
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 /* =========================
-   EXPORT FOR VERCEL
+   EXPORT VERCEL
 ========================= */
 module.exports = serverless(app);

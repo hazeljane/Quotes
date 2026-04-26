@@ -46,7 +46,10 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.textContent = "Registering...";
 
     try {
-      const res = await fetch("/api/register", {
+      // 🔥 CHANGE THIS TO YOUR BACKEND URL
+      const API_URL = "http://localhost:5000";
+
+      const res = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -54,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({
           username,
           email,
-          image: imageData || ""
+          image: imageData
         })
       });
 
@@ -65,8 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      alert("Registered successfully! Please login.");
+      alert("Registered successfully!");
 
+      // reset form
       form.reset();
       profileIcon.innerHTML = `<span class="material-symbols-outlined">account_circle</span>`;
       imageData = "";
@@ -74,8 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = "login.html";
 
     } catch (err) {
-      console.error("REGISTER ERROR:", err);
-      alert("Server error. Please try again.");
+      console.error(err);
+      alert("Server error");
     } finally {
       btn.disabled = false;
       btn.textContent = "Register";
