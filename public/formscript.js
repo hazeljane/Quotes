@@ -3,25 +3,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("profileForm");
   const profileInput = document.getElementById("profileInput");
   const profileIcon = document.getElementById("profileIcon");
-  const btn = form.querySelector("button[type='submit']");
+  const btn = form.querySelector("button");
 
   let imageData = "";
 
   /* =========================
      IMAGE PREVIEW
   ========================= */
-  profileInput.addEventListener("change", function () {
-    const file = this.files[0];
+  profileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
 
-    reader.onload = (e) => {
-      imageData = e.target.result;
+    reader.onload = (ev) => {
+      imageData = ev.target.result;
 
       profileIcon.innerHTML = `
-        <img src="${imageData}" 
-          style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+        <img src="${imageData}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
       `;
     };
 
@@ -29,13 +28,21 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* =========================
-     REGISTER USER
+     API BASE (FIXED)
+  ========================= */
+  const API =
+    window.location.hostname === "localhost"
+      ? "http://localhost:5000"
+      : "https://your-vercel-backend.vercel.app";
+
+  /* =========================
+     REGISTER
   ========================= */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const username = document.getElementById("username").value.trim();
-    const email = document.getElementById("email").value.trim().toLowerCase();
+    const email = document.getElementById("email").value.trim();
 
     if (!username || !email) {
       alert("Please fill all fields");
@@ -46,10 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.textContent = "Registering...";
 
     try {
-      // 🔥 CHANGE THIS TO YOUR BACKEND URL
-      const API_URL = "http://localhost:5000";
-
-      const res = await fetch(`${API_URL}/register`, {
+      const res = await fetch(`${API}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -68,9 +72,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      alert("Registered successfully!");
+      // SAVE SESSION
+      localStorage.setItem("userId", data.user._id);
+      localStorage.setItem("username", data.user.username);
 
-      // reset form
+      alert("Registration successful!");
+
       form.reset();
       profileIcon.innerHTML = `<span class="material-symbols-outlined">account_circle</span>`;
       imageData = "";
@@ -79,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (err) {
       console.error(err);
-      alert("Server error");
+      alert("Server error. Please try again.");
     } finally {
       btn.disabled = false;
       btn.textContent = "Register";
