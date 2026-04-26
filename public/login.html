@@ -43,6 +43,7 @@ button {
   font-weight: bold;
   border-radius: 6px;
   cursor: pointer;
+  transition: 0.2s;
 }
 
 button:disabled {
@@ -78,10 +79,9 @@ const msg = document.getElementById("msg");
 const emailInput = document.getElementById("email");
 
 /* =========================
-   AUTO REDIRECT IF LOGGED IN
+   AUTO REDIRECT
 ========================= */
-const userId = localStorage.getItem("userId");
-if (userId) {
+if (localStorage.getItem("userId")) {
   window.location.href = "myquotes.html";
 }
 
@@ -91,10 +91,8 @@ if (userId) {
 async function login() {
   const email = emailInput.value.trim().toLowerCase();
 
-  msg.innerText = "";
-  msg.style.color = "red";
-
   if (!email) {
+    msg.style.color = "red";
     msg.innerText = "Email is required";
     return;
   }
@@ -105,20 +103,19 @@ async function login() {
 
     const res = await fetch("/api/login", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email })
     });
 
     const data = await res.json();
 
     if (!res.ok) {
+      msg.style.color = "red";
       msg.innerText = data.message || "Login failed";
       return;
     }
 
-    // save session
+    // ✅ SAFE SESSION STORAGE
     localStorage.setItem("userId", data.user._id);
     localStorage.setItem("username", data.user.username);
     localStorage.setItem("email", data.user.email);
@@ -132,6 +129,7 @@ async function login() {
 
   } catch (err) {
     console.error(err);
+    msg.style.color = "red";
     msg.innerText = "Server error. Try again.";
   } finally {
     btn.disabled = false;
