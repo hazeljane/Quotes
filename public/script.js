@@ -1,13 +1,14 @@
 let quotes = [];
 let index = 0;
 
+const API = "/api"; // 👈 important for Vercel deployment
+
 /* =========================
-   SESSION (FAST LOAD - NO BLINK)
+   SESSION
 ========================= */
 const userId = localStorage.getItem("userId");
 const username = localStorage.getItem("username");
 
-// ❌ no user = redirect immediately
 if (!userId) {
   window.location.href = "login.html";
 }
@@ -34,44 +35,26 @@ const dislikeBtn = document.getElementById("dislikeBtn");
 const ratingBtns = document.querySelectorAll(".rating button");
 
 const logoutBtn = document.getElementById("logoutBtn");
-const doneMessage = document.getElementById("doneMessage");
 
 /* =========================
-   INIT (INSTANT NAME LOAD)
+   INIT
 ========================= */
 function init() {
-  // 🔥 NO FETCH FOR NAME = INSTANT UI
   userNameEl.textContent = `Welcome ${username || "User"}`;
-
   loadQuotes();
 }
 
 init();
 
 /* =========================
-   LOAD USER (OPTIONAL REFRESH DATA)
-========================= */
-async function loadUser() {
-  try {
-    const res = await fetch(`/api/user/${userId}`);
-    const data = await res.json();
-
-    if (!res.ok) return;
-
-    userNameEl.textContent = `Welcome ${data.username || username}`;
-    checkDone(data);
-
-  } catch (err) {
-    console.log("User load failed");
-  }
-}
-
-/* =========================
    LOAD QUOTES
 ========================= */
 async function loadQuotes() {
   try {
-    const res = await fetch("/api/quotes");
+    const res = await fetch(`${API}/quotes`);
+
+    if (!res.ok) throw new Error("Failed to load quotes");
+
     quotes = await res.json();
 
     if (!quotes.length) {
@@ -82,6 +65,7 @@ async function loadQuotes() {
     showQuote();
 
   } catch (err) {
+    console.error(err);
     quoteEl.textContent = "Server error";
   }
 }
@@ -90,6 +74,8 @@ async function loadQuotes() {
    SHOW QUOTE
 ========================= */
 function showQuote() {
+  if (!quotes.length) return;
+
   quoteEl.textContent = quotes[index].text;
 
   likeBtn.classList.remove("active");
@@ -101,11 +87,15 @@ function showQuote() {
    NAVIGATION
 ========================= */
 prevBtn.onclick = () => {
+  if (!quotes.length) return;
+
   index = (index - 1 + quotes.length) % quotes.length;
   showQuote();
 };
 
 nextBtn.onclick = () => {
+  if (!quotes.length) return;
+
   index = (index + 1) % quotes.length;
   showQuote();
 };
@@ -114,13 +104,14 @@ nextBtn.onclick = () => {
    LIKE
 ========================= */
 likeBtn.onclick = async () => {
-  const quoteId = quotes[index]._id;
+  const quoteId = quotes[index]?._id;
+  if (!quoteId) return;
 
   likeBtn.classList.toggle("active");
 
-  await fetch(`/api/like/${userId}/${quoteId}`, {
-  method: "POST"
-});
+  await fetch(`${API}/like/${userId}/${quoteId}`, {
+    method: "POST"
+  });
 };
 
 /* =========================
@@ -135,7 +126,8 @@ dislikeBtn.onclick = () => {
 ========================= */
 ratingBtns.forEach((star, i) => {
   star.onclick = async () => {
-    const quoteId = quotes[index]._id;
+    const quoteId = quotes[index]?._id;
+    if (!quoteId) return;
 
     ratingBtns.forEach(b => b.classList.remove("active"));
 
@@ -143,11 +135,11 @@ ratingBtns.forEach((star, i) => {
       ratingBtns[j].classList.add("active");
     }
 
-    await fetch(`/api/star/${userId}/${quoteId}`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ star: i + 1 })
-});
+    await fetch(`${API}/star/${userId}/${quoteId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ star: i + 1 })
+    });
   };
 });
 
@@ -158,10 +150,11 @@ submitReview.onclick = async () => {
   const text = reviewInput.value.trim();
   if (!text) return alert("Write a review");
 
-  const quoteId = quotes[index]._id;
+  const quoteId = quotes[index]?._id;
+  if (!quoteId) return;
 
   const res = await fetch(
-    `/api/review/${userId}/${quoteId}`,
+    `${API}/review/${userId}/${quoteId}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -170,12 +163,35 @@ submitReview.onclick = async () => {
   );
 
   const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.message || "Error");
+    return;
+  }
+
   alert(data.message);
 
   reviewInput.value = "";
-
   loadUser();
 };
+
+/* =========================
+   USER DATA REFRESH
+========================= */
+async function loadUser() {
+  try {
+    const res = await fetch(`${API}/user/${userId}`);
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    userNameEl.textContent = `Welcome ${data.username || username}`;
+
+  } catch (err) {
+    console.log("User load failed");
+  }
+}
 
 /* =========================
    HISTORY
@@ -183,7 +199,7 @@ submitReview.onclick = async () => {
 historyBtn.onclick = async () => {
   modal.style.display = "flex";
 
-  const res = await fetch(`/api/user/${userId}`);
+  const res = await fetch(`${API}/user/${userId}`);
   const user = await res.json();
 
   historyList.innerHTML = "";
