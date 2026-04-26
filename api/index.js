@@ -29,9 +29,11 @@ async function connectDB() {
   }
 
   cached.conn = await cached.promise;
+
+  console.log("✅ MongoDB connected"); // 👈 ADD THIS
+
   return cached.conn;
 }
-
 /* =========================
    MODELS
 ========================= */
