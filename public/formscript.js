@@ -4,6 +4,8 @@ const form = document.getElementById("profileForm");
 const profileInput = document.getElementById("profileInput");
 const profileIcon = document.getElementById("profileIcon");
 
+const btn = form.querySelector("button[type='submit']");
+
 let imageData = "";
 
 /* =========================
@@ -41,7 +43,6 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  const btn = form.querySelector("button");
   btn.disabled = true;
   btn.textContent = "Registering...";
 
@@ -58,7 +59,12 @@ form.addEventListener("submit", async (e) => {
       })
     });
 
-    const data = await res.json();
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (err) {
+      throw new Error("Invalid server response");
+    }
 
     if (!res.ok) {
       alert(data.message || "Registration failed");
@@ -74,8 +80,8 @@ form.addEventListener("submit", async (e) => {
     window.location.href = "login.html";
 
   } catch (err) {
-    alert("Server error. Please try again.");
     console.error(err);
+    alert("Server error. Please try again.");
   } finally {
     btn.disabled = false;
     btn.textContent = "Register";

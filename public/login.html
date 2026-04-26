@@ -75,9 +75,21 @@ button:hover:not(:disabled) {
 <script>
 const btn = document.getElementById("loginBtn");
 const msg = document.getElementById("msg");
+const emailInput = document.getElementById("email");
 
-btn.addEventListener("click", async () => {
-  const email = document.getElementById("email").value.trim().toLowerCase();
+/* =========================
+   AUTO REDIRECT IF LOGGED IN
+========================= */
+const userId = localStorage.getItem("userId");
+if (userId) {
+  window.location.href = "index.html";
+}
+
+/* =========================
+   LOGIN FUNCTION
+========================= */
+async function login() {
+  const email = emailInput.value.trim().toLowerCase();
 
   msg.innerText = "";
   msg.style.color = "red";
@@ -106,6 +118,7 @@ btn.addEventListener("click", async () => {
       return;
     }
 
+    // save session
     localStorage.setItem("userId", data.user._id);
     localStorage.setItem("username", data.user.username);
     localStorage.setItem("email", data.user.email);
@@ -118,11 +131,21 @@ btn.addEventListener("click", async () => {
     }, 800);
 
   } catch (err) {
+    console.error(err);
     msg.innerText = "Server error. Try again.";
   } finally {
     btn.disabled = false;
     btn.innerText = "Login";
   }
+}
+
+/* =========================
+   EVENTS
+========================= */
+btn.addEventListener("click", login);
+
+emailInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") login();
 });
 </script>
 
