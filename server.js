@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+const serverless = require("serverless-http");
+
 const app = express();
 
 /* =========================
@@ -13,21 +15,24 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 /* =========================
-   CONNECT DB
+   DB CONNECTION (OPTIMIZED FOR VERCEL)
 ========================= */
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => {
-    console.log("❌ MongoDB Error:", err.message);
-    process.exit(1);
-  });
+let isConnected = false;
+
+async function connectDB() {
+  if (isConnected) return;
+
+  await mongoose.connect(process.env.MONGO_URI);
+  isConnected = true;
+
+  console.log("✅ MongoDB Connected");
+}
 
 /* =========================
    MODELS
 ========================= */
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, trim: true },
-
   email: {
     type: String,
     required: true,
@@ -35,7 +40,6 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
-
   image: { type: String, default: "" },
 
   likedQuotes: [{ type: mongoose.Schema.Types.ObjectId }],
@@ -68,6 +72,8 @@ const Quote = mongoose.model("Quote", quoteSchema);
 ========================= */
 app.post("/register", async (req, res) => {
   try {
+    await connectDB();
+
     let { username, email } = req.body;
 
     if (!username || !email) {
@@ -86,8 +92,7 @@ app.post("/register", async (req, res) => {
     res.json({ message: "Registered", user });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -96,6 +101,8 @@ app.post("/register", async (req, res) => {
 ========================= */
 app.post("/login", async (req, res) => {
   try {
+    await connectDB();
+
     let { email } = req.body;
 
     if (!email) {
@@ -120,16 +127,17 @@ app.post("/login", async (req, res) => {
     });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 });
 
 /* =========================
-   QUOTES (AUTO SEED)
+   QUOTES
 ========================= */
 app.get("/quotes", async (req, res) => {
   try {
+    await connectDB();
+
     let quotes = await Quote.find();
 
     if (!quotes.length) {
@@ -148,10 +156,12 @@ app.get("/quotes", async (req, res) => {
 });
 
 /* =========================
-   LIKE (NO DUPLICATE)
+   LIKE
 ========================= */
 app.post("/like/:userId/:quoteId", async (req, res) => {
   try {
+    await connectDB();
+
     const { userId, quoteId } = req.params;
 
     const user = await User.findById(userId);
@@ -178,10 +188,12 @@ app.post("/like/:userId/:quoteId", async (req, res) => {
 });
 
 /* =========================
-   STAR (UPDATE OR ADD)
+   STAR RATING
 ========================= */
 app.post("/star/:userId/:quoteId", async (req, res) => {
   try {
+    await connectDB();
+
     const { userId, quoteId } = req.params;
     const { star } = req.body;
 
@@ -208,10 +220,12 @@ app.post("/star/:userId/:quoteId", async (req, res) => {
 });
 
 /* =========================
-   REVIEW (ONE PER USER PER QUOTE)
+   REVIEW
 ========================= */
 app.post("/review/:userId/:quoteId", async (req, res) => {
   try {
+    await connectDB();
+
     const { userId, quoteId } = req.params;
     const { review } = req.body;
 
@@ -246,6 +260,8 @@ app.post("/review/:userId/:quoteId", async (req, res) => {
 ========================= */
 app.get("/user/:id", async (req, res) => {
   try {
+    await connectDB();
+
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -260,10 +276,6 @@ app.get("/user/:id", async (req, res) => {
 });
 
 /* =========================
-   START SERVER
+   EXPORT (VERCEL SERVERLESS)
 ========================= */
-const serverless = require("serverless-http");
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+module.exports = serverless(app);
