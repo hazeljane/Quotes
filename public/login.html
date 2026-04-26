@@ -82,7 +82,7 @@ const emailInput = document.getElementById("email");
 ========================= */
 const userId = localStorage.getItem("userId");
 if (userId) {
-  window.location.href = "index.html";
+  window.location.href = "myquotes.html";
 }
 
 /* =========================
@@ -127,7 +127,7 @@ async function login() {
     msg.innerText = "Login successful! Redirecting...";
 
     setTimeout(() => {
-      window.location.href = "index.html";
+      window.location.href = "myquotes.html";
     }, 800);
 
   } catch (err) {

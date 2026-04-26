@@ -3,98 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quote App</title>
-
-<link rel="stylesheet" href="index.css">
-
-<!-- Google Material Icons -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
-
+<title>Profile</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
 </head>
 
 <body>
 
-<div class="card">
+<div class="form-container">
 
-<div class="card-header">
-	<div>
-		<h1>QUOTE APP</h1>
-		<p id="userName">Welcome</p>
-	</div>
+<form id="profileForm" class="profile-form">
 
-	<div style="display:flex; gap:10px;">
-		<span class="material-symbols-outlined" id="historyBtn">
-			history
-		</span>
-
-		<span class="material-symbols-outlined" id="logoutBtn">
-			logout
-		</span>
-	</div>
-</div>
-
-	<!-- QUOTE NAV -->
-	<div class="reaction-row">
-		<button id="prev">⬅</button>
-		<p id="quote">Loading quotes...</p>
-		<button id="next">➡</button>
-	</div>
-
-	<!-- REACTIONS -->
-	<div class="opinion">
-
-		<!-- LIKE / DISLIKE -->
-		<div class="btn-group">
-			<button id="likeBtn" class="react-btn">
-				<span class="material-symbols-outlined">thumb_up</span>
-			</button>
-
-			<button id="dislikeBtn" class="react-btn">
-				<span class="material-symbols-outlined">thumb_down</span>
-			</button>
+	<div class="profile">
+		<div id="profileIcon" class="profile-circle">
+			<span class="material-symbols-outlined">account_circle</span>
 		</div>
 
-		<!-- STAR RATING -->
-		<div class="rating">
-			<button>★</button>
-			<button>★</button>
-			<button>★</button>
-			<button>★</button>
-			<button>★</button>
-		</div>
-
+		<label class="edit_profile">
+			<input type="file" id="profileInput" accept="image/*">
+			<span class="material-symbols-outlined">edit</span>
+		</label>
 	</div>
 
-	<!-- REVIEW -->
-	<div class="review-box" id="reviewBox">
-		<input id="reviewInput" placeholder="Write review...">
-		<button id="submitReview">Submit</button>
-	</div>
+	<input type="text" id="username" placeholder="Username" required>
+	<input type="email" id="email" placeholder="Email" required>
 
-	<!-- DONE MESSAGE -->
-	<p id="doneMessage" style="display:none; text-align:center; margin-top:10px;">
-		🎉 Congrats! You finished all quotes!
-	</p>
+	<button type="submit">Continue</button>
+
+</form>
 
 </div>
 
-<!-- HISTORY MODAL -->
-<div class="modal" id="modal">
-
-	<div class="modal-content">
-
-		<div class="modal-header">
-			<h3>History</h3>
-			<span id="closeModal">✖</span>
-		</div>
-
-		<ul id="historyList"></ul>
-
-	</div>
-
-</div>
-
-<script src="script.js"></script>
-
+<script src="formscript.js"></script>
 </body>
 </html>
