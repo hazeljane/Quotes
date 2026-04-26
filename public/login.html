@@ -43,16 +43,11 @@ button {
   font-weight: bold;
   border-radius: 6px;
   cursor: pointer;
-  transition: 0.2s;
 }
 
 button:disabled {
   background: gray;
   cursor: not-allowed;
-}
-
-button:hover:not(:disabled) {
-  background: #45a049;
 }
 
 #msg {
@@ -78,18 +73,19 @@ const btn = document.getElementById("loginBtn");
 const msg = document.getElementById("msg");
 const emailInput = document.getElementById("email");
 
-/* =========================
-   AUTO REDIRECT
-========================= */
+// CHANGE THIS IF DEPLOYED
+const API = "/api"; 
+// OR if local backend:
+// const API = "http://localhost:5000";
+
 if (localStorage.getItem("userId")) {
   window.location.href = "myquotes.html";
 }
 
-/* =========================
-   LOGIN FUNCTION
-========================= */
 async function login() {
   const email = emailInput.value.trim().toLowerCase();
+
+  msg.innerText = "";
 
   if (!email) {
     msg.style.color = "red";
@@ -101,9 +97,11 @@ async function login() {
     btn.disabled = true;
     btn.innerText = "Logging in...";
 
-    const res = await fetch("/api/login", {
+    const res = await fetch(`${API}/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ email })
     });
 
@@ -115,7 +113,6 @@ async function login() {
       return;
     }
 
-    // ✅ SAFE SESSION STORAGE
     localStorage.setItem("userId", data.user._id);
     localStorage.setItem("username", data.user.username);
     localStorage.setItem("email", data.user.email);
@@ -128,18 +125,15 @@ async function login() {
     }, 800);
 
   } catch (err) {
-    console.error(err);
+    console.error("LOGIN ERROR:", err);
     msg.style.color = "red";
-    msg.innerText = "Server error. Try again.";
+    msg.innerText = "Server not responding";
   } finally {
     btn.disabled = false;
     btn.innerText = "Login";
   }
 }
 
-/* =========================
-   EVENTS
-========================= */
 btn.addEventListener("click", login);
 
 emailInput.addEventListener("keypress", (e) => {

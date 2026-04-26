@@ -13,16 +13,19 @@ app.use(cors({ origin: "*" }));
 app.use(express.json({ limit: "10mb" }));
 
 /* =========================
-   DB CONNECT (Vercel SAFE FIXED)
+   DB CONNECTION (VERCEL SAFE)
 ========================= */
-let cached = global.mongoose || { conn: null, promise: null };
-global.mongoose = cached;
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 async function connectDB() {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGO_URI).then((m) => m);
+    cached.promise = mongoose.connect(process.env.MONGO_URI);
   }
 
   cached.conn = await cached.promise;
@@ -30,7 +33,7 @@ async function connectDB() {
 }
 
 /* =========================
-   MODELS (SAFE INIT)
+   MODELS
 ========================= */
 const User =
   mongoose.models.User ||
@@ -39,21 +42,41 @@ const User =
     new mongoose.Schema(
       {
         username: { type: String, required: true, trim: true },
-        email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+
+        email: {
+          type: String,
+          required: true,
+          unique: true,
+          lowercase: true,
+          trim: true,
+        },
+
         image: { type: String, default: "" },
 
-        likedQuotes: [{ type: String }],
+        likedQuotes: [
+          { type: mongoose.Schema.Types.ObjectId, ref: "Quote" },
+        ],
 
         ratedQuotes: [
           {
-            quoteId: String,
-            rating: Number,
+            quoteId: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "Quote",
+            },
+            rating: {
+              type: Number,
+              min: 1,
+              max: 5,
+            },
           },
         ],
 
         reviewedQuotes: [
           {
-            quoteId: String,
+            quoteId: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "Quote",
+            },
             review: String,
           },
         ],
@@ -76,9 +99,9 @@ const Quote =
   );
 
 /* =========================
-   REGISTER (FIXED)
+   REGISTER
 ========================= */
-app.post("/register", async (req, res) => {
+app.post("/api/register", async (req, res) => {
   try {
     await connectDB();
 
@@ -102,10 +125,8 @@ app.post("/register", async (req, res) => {
       image: image || "",
     });
 
-    res.status(201).json({
-      message: "Registered successfully",
-      user,
-    });
+    res.status(201).json({ message: "Registered", user });
+
   } catch (err) {
     console.error("REGISTER ERROR:", err);
     res.status(500).json({ message: "Server error" });
@@ -115,7 +136,7 @@ app.post("/register", async (req, res) => {
 /* =========================
    LOGIN
 ========================= */
-app.post("/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
   try {
     await connectDB();
 
@@ -133,10 +154,8 @@ app.post("/login", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json({
-      message: "Login success",
-      user,
-    });
+    res.json({ message: "Login success", user });
+
   } catch (err) {
     console.error("LOGIN ERROR:", err);
     res.status(500).json({ message: "Server error" });
@@ -146,7 +165,7 @@ app.post("/login", async (req, res) => {
 /* =========================
    QUOTES
 ========================= */
-app.get("/quotes", async (req, res) => {
+app.get("/api/quotes", async (req, res) => {
   try {
     await connectDB();
 
@@ -161,8 +180,9 @@ app.get("/quotes", async (req, res) => {
     }
 
     res.json(quotes);
+
   } catch (err) {
-    console.error(err);
+    console.error("QUOTES ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -170,7 +190,7 @@ app.get("/quotes", async (req, res) => {
 /* =========================
    GET USER
 ========================= */
-app.get("/user/:id", async (req, res) => {
+app.get("/api/user/:id", async (req, res) => {
   try {
     await connectDB();
 
@@ -181,8 +201,9 @@ app.get("/user/:id", async (req, res) => {
     }
 
     res.json(user);
+
   } catch (err) {
-    console.error(err);
+    console.error("USER ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -190,19 +211,21 @@ app.get("/user/:id", async (req, res) => {
 /* =========================
    LIKE
 ========================= */
-app.post("/like/:userId/:quoteId", async (req, res) => {
+app.post("/api/like/:userId/:quoteId", async (req, res) => {
   try {
     await connectDB();
 
-    const user = await User.findById(req.params.userId);
-    const quote = await Quote.findById(req.params.quoteId);
+    const { userId, quoteId } = req.params;
+
+    const user = await User.findById(userId);
+    const quote = await Quote.findById(quoteId);
 
     if (!user || !quote) {
       return res.status(404).json({ message: "Not found" });
     }
 
-    if (!user.likedQuotes.includes(req.params.quoteId)) {
-      user.likedQuotes.push(req.params.quoteId);
+    if (!user.likedQuotes.includes(quoteId)) {
+      user.likedQuotes.push(quoteId);
       quote.likes += 1;
 
       await user.save();
@@ -210,43 +233,9 @@ app.post("/like/:userId/:quoteId", async (req, res) => {
     }
 
     res.json({ message: "Liked" });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-/* =========================
-   STAR RATING (FIXED SAFE COMPARE)
-========================= */
-app.post("/star/:userId/:quoteId", async (req, res) => {
-  try {
-    await connectDB();
-
-    const user = await User.findById(req.params.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const existing = user.ratedQuotes.find(
-      (r) => r.quoteId === req.params.quoteId
-    );
-
-    if (existing) {
-      existing.rating = req.body.star;
-    } else {
-      user.ratedQuotes.push({
-        quoteId: req.params.quoteId,
-        rating: req.body.star,
-      });
-    }
-
-    await user.save();
-
-    res.json({ message: "Rating saved" });
-  } catch (err) {
-    console.error(err);
+    console.error("LIKE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -254,31 +243,36 @@ app.post("/star/:userId/:quoteId", async (req, res) => {
 /* =========================
    REVIEW
 ========================= */
-app.post("/review/:userId/:quoteId", async (req, res) => {
+app.post("/api/review/:userId/:quoteId", async (req, res) => {
   try {
     await connectDB();
 
-    const user = await User.findById(req.params.userId);
+    const { userId, quoteId } = req.params;
+    const { review } = req.body;
+
+    if (!review) {
+      return res.status(400).json({ message: "Review required" });
+    }
+
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.reviewedQuotes.push({
-      quoteId: req.params.quoteId,
-      review: req.body.review,
-    });
+    user.reviewedQuotes.push({ quoteId, review });
 
     await user.save();
 
     res.json({ message: "Review saved" });
+
   } catch (err) {
-    console.error(err);
+    console.error("REVIEW ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 /* =========================
-   EXPORT VERCEL
+   EXPORT
 ========================= */
 module.exports = serverless(app);

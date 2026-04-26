@@ -3,61 +3,64 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     userCode: {
-  type: String,
-  unique: true,
-  required: true,
-  default: () => "U" + Date.now()
-}
+      type: String,
+      unique: true,
+      required: true,
+      default: () => "U" + Date.now(),
+    },
 
     username: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
 
     email: {
       type: String,
       required: true,
-      unique: true,
+      unique: true, // ⚠️ this causes duplicate error if same email used
       lowercase: true,
-      trim: true
+      trim: true,
     },
 
     image: {
       type: String,
-      default: ""
+      default: "",
     },
 
     likedQuotes: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Quote"
-      }
+        ref: "Quote",
+      },
     ],
 
     ratedQuotes: [
       {
         quoteId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Quote"
+          ref: "Quote",
         },
         rating: {
           type: Number,
           min: 1,
-          max: 5
-        }
-      }
+          max: 5,
+        },
+      },
     ],
 
     reviewedQuotes: [
       {
         quoteId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Quote"
+          ref: "Quote",
         },
-        review: String
-      }
-    ]
+        review: {
+          type: String,
+          trim: true,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
